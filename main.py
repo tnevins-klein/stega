@@ -1,19 +1,49 @@
+from itertools import islice
 from PIL import Image
 
+def batched(iterable, n):
+    iterator = iter(iterable)
+    while (batch := tuple(islice(iterator, n))):
+        yield batch
 
-def main():
-    with Image.open("grayson.jpg") as im:
-        im_bytes = im.tobytes()  # Convert image to raw bytes
+def iter_bits(bytes):
+    for byte in bytes:
+        for i in range(8):
+            yield byte >> (7 - i) & 1
 
-        print(len(im_bytes)/3)  # Length of im_bytes should be divisible by 3.
+def least_significant_bit(message):
+    message_bytes = message.encode()
 
-        new_im_bytes = bytearray(len(im_bytes))  # Make a byte array to store my modified data
-        for i, b in enumerate(im_bytes):
-            new_im_bytes[i] = 255 - b  # Modify each byte
+    img = Image.open("source.png")
+    im_bytes = bytearray(img.tobytes())
 
-        new_im = Image.frombytes('RGB', im.size, new_im_bytes)  # Make a new image
-        new_im.show()  # Let's see what we did!
+    assert len(message_bytes) * 8 <= len(im_bytes), "Message too long for encoding in this image."
 
+    for n, bit in enumerate(iter_bits(message_bytes)):
+        im_bytes[n] = (im_bytes[n] & ~1) | bit
+    
+    new_im = Image.frombytes('RGB', img.size, im_bytes)
+    new_im.show()
+    new_im.save("encoded.png")
 
+    img.close()
+
+def decode_least_singificant_bit():
+    img = Image.open("stlouisEncode.png")
+    im_bytes = bytearray(img.tobytes())
+
+    bits = []
+    for byte in im_bytes:
+        bits.append(byte & 1)
+
+    b = [sum([byte[7 - b] << b for b in range(0,8)])
+        for byte in batched(bits[:len(bits) - len(bits) % 8], 8)]
+    
+    print(bytearray(b)[:1000])
+
+    img.close()
+    
 if __name__ == '__main__':
-    main()
+    #least_significant_bit("fine i guess you are kind of goated. come here vro <3\0")
+    decode_least_singificant_bit()
+    # print(decode_least_significant_bit())
